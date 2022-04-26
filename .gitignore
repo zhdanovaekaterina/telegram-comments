@@ -1,0 +1,4 @@
+config.py
+*.json
+*.session
+__pycache__
