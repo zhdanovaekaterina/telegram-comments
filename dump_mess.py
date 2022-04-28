@@ -1,4 +1,5 @@
 # import block
+from requests import post
 import config
 import json
 from datetime import date, datetime
@@ -11,7 +12,7 @@ client.start()
 
 async def dump_all_messages(channel):
 	"""Записывает json-файл с информацией о всех сообщениях канала/чата"""
-	offset_msg = 0    # номер записи, с которой начинается считывание
+	offset_msg = post_id
 	limit_msg = 100   # максимальное число записей, передаваемых за один раз
 
 	all_messages = []   # список всех сообщений
@@ -47,9 +48,18 @@ async def dump_all_messages(channel):
 	with open('channel_messages.json', 'w', encoding='utf8') as outfile:
 		 json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
+def input_url():
+	global post_id, url
+	'''Принимает ссылку на пост и извлекает из нее ссылку на канал и номер поста'''
+	post_input = input("Введите ссылку на пост: ")
+	post_id = int(post_input.split('/')[-1])		# возвращает номер поста в канале
+	url = post_input.split('/')
+	del url[-1]
+	url = '/'.join(url) + '/'						# возвращает ссылку на канал
+
 
 async def main():
-	url = input("Введите ссылку на канал или чат: ")
+	input_url()
 	channel = await client.get_entity(url)
 	await dump_all_messages(channel)
 	print('Done!')
