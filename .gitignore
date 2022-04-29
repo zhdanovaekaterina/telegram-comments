@@ -3,3 +3,4 @@ config.py
 *.session
 *.session-journal
 __pycache__
+google_key

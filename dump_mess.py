@@ -1,4 +1,5 @@
 # import block
+from distutils import dist
 from requests import post
 import config
 import json
@@ -12,13 +13,13 @@ client.start()
 
 async def dump_all_messages(channel):
 	"""Записывает json-файл с информацией о всех сообщениях канала/чата"""
-	offset_msg = post_id
-	limit_msg = 100   # максимальное число записей, передаваемых за один раз
+	offset_msg = 0
+	limit_msg = 100  					 # максимальное число записей, передаваемых за один раз
 
-	all_messages = []   # список всех сообщений
+	all_messages = []  					 # список всех сообщений
 	total_messages = 0
-	total_count_limit = 0  # поменяйте это значение, если вам нужны не все сообщения
-
+	total_count_limit = 0  			     # поменяйте это значение, если вам нужны не все сообщения
+	
 	class DateTimeEncoder(json.JSONEncoder):
 		'''Класс для сериализации записи дат в JSON'''
 		def default(self, o):
@@ -31,8 +32,8 @@ async def dump_all_messages(channel):
 	while True:
 		history = await client(GetHistoryRequest(
 			peer=channel,
-			offset_id=offset_msg,
-			offset_date=None, add_offset=0,
+			offset_id = offset_msg,
+			offset_date = None, add_offset=0,
 			limit=limit_msg, max_id=0, min_id=0,
 			hash=0))
 		if not history.messages:
@@ -49,10 +50,10 @@ async def dump_all_messages(channel):
 		 json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
 def input_url():
-	global post_id, url
 	'''Принимает ссылку на пост и извлекает из нее ссылку на канал и номер поста'''
+	global post_id, url
 	post_input = input("Введите ссылку на пост: ")
-	post_id = int(post_input.split('/')[-1])		# возвращает номер поста в канале
+	post_id = int(post_input.split('/')[-1])			# возвращает номер поста в канале
 	url = post_input.split('/')
 	del url[-1]
 	url = '/'.join(url) + '/'						# возвращает ссылку на канал
