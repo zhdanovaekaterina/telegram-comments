@@ -36,7 +36,6 @@ def add_post(input_url):
     was_added = False
     newRec = [url, post_id_to_compare]
     oldRec = worksheet.get_all_values()
-    print(oldRec)
     for i in range(len(oldRec)):                # проверяет пост на наличие в базе
         if newRec[0] == oldRec[i][0] and newRec[1] == oldRec[i][1]:
             was_added = True
