@@ -22,7 +22,7 @@ def get_text_messages(message):
         if add_post(input_url):
             bot.send_message(message.from_user.id, "Пост уже отслеживается.")
         else:
-            bot.send_message(message.from_user.id, "Пост успешно добавлен к отслеживанию. Собираю комментарии...")
+            bot.send_message(message.from_user.id, "Пост успешно добавлен к отслеживанию.")
     else:
         bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /start.")
 
@@ -42,7 +42,7 @@ def add_post(input_url):
             break
     if not was_added:
         worksheet.append_row(newRec)
-    return was_added
+        return was_added
 
 
 bot.polling()

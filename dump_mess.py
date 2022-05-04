@@ -56,7 +56,7 @@ def input_url():
 	post_id = int(post_input.split('/')[-1])			# возвращает номер поста в канале
 	url = post_input.split('/')
 	del url[-1]
-	url = '/'.join(url) + '/'						# возвращает ссылку на канал
+	url = '/'.join(url) + '/'							# возвращает ссылку на канал
 
 
 async def main():
