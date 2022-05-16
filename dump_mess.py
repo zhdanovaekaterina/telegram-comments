@@ -1,70 +1,46 @@
-# import block
 from distutils import dist
 from requests import post
 import config
 import json
+import telethon
 from datetime import date, datetime
 from telethon.sync import TelegramClient
 from telethon import connection
 from telethon.tl.functions.messages import GetHistoryRequest
+import gspread
 
 client = TelegramClient(config.username, config.api_id, config.api_hash)
 client.start()
 
-async def dump_all_messages(channel):
-	"""Записывает json-файл с информацией о всех сообщениях канала/чата"""
-	offset_msg = 0
-	limit_msg = 100  					 # максимальное число записей, передаваемых за один раз
+gs = gspread.service_account(filename='google_key.json')     # подключаем файл с ключами и пр.
+sh = gs.open_by_key(config.google_sheet)                     # подключаем таблицу по ID
+worksheet = sh.sheet1                                        # получаем первый лист
 
-	all_messages = []  					 # список всех сообщений
-	total_messages = 0
-	total_count_limit = 0  			     # поменяйте это значение, если вам нужны не все сообщения
+
+async def dump_all_messages(channel:str, post_id:int):
+	'''Принимает название канала и id поста. Записывает в Google таблицу комментарии.'''
+	async for message in client.iter_messages(channel, reply_to=post_id, reverse=True):
+		if isinstance(message.sender, telethon.tl.types.User):
+			mess_date = message.date.isoformat()
+			newRec = [channel, post_id, mess_date, message.sender.first_name, message.text]
+			print(newRec)
+			# worksheet.append_row(newRec)
+
+
+def input_url(worksheet):
+	'''Принимает ссылку на лист в Google таблицах. Возвращает список списков.'''
+	all_posts = worksheet.get_all_values()
+	for i in range(1, len(all_posts)):
+		all_posts[i][1] = int(all_posts[i][1])
+	return all_posts
 	
-	class DateTimeEncoder(json.JSONEncoder):
-		'''Класс для сериализации записи дат в JSON'''
-		def default(self, o):
-			if isinstance(o, datetime):
-				return o.isoformat()
-			if isinstance(o, bytes):
-				return list(o)
-			return json.JSONEncoder.default(self, o)
-
-	while True:
-		history = await client(GetHistoryRequest(
-			peer=channel,
-			offset_id = offset_msg,
-			offset_date = None, add_offset=0,
-			limit=limit_msg, max_id=0, min_id=0,
-			hash=0))
-		if not history.messages:
-			break
-		messages = history.messages
-		for message in messages:
-			all_messages.append(message.to_dict())
-		offset_msg = messages[len(messages) - 1].id
-		total_messages = len(all_messages)
-		if total_count_limit != 0 and total_messages >= total_count_limit:
-			break
-
-	with open('channel_messages.json', 'w', encoding='utf8') as outfile:
-		 json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
-
-def input_url():
-	'''Принимает ссылку на пост и извлекает из нее ссылку на канал и номер поста'''
-	global post_id, url
-	post_input = input("Введите ссылку на пост: ")
-	post_id = int(post_input.split('/')[-1])			# возвращает номер поста в канале
-	url = post_input.split('/')
-	del url[-1]
-	url = '/'.join(url) + '/'							# возвращает ссылку на канал
-
 
 async def main():
-	input_url()
-	channel = await client.get_entity(url)
-	await dump_all_messages(channel)
-	print('Done!')
+	params = input_url(worksheet)
+	for i in range(1, len(params)):
+		await dump_all_messages(*params[i])
 
 
 with client:
 	client.loop.run_until_complete(main())
+	
