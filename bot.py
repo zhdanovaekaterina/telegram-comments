@@ -1,4 +1,5 @@
 import telebot
+from telebot import types
 import config
 import gspread
 import re
@@ -13,18 +14,59 @@ bot.delete_webhook()
 post_id = ''
 url = ''
 
+@bot.message_handler(commands=['start'])
+def start_command(message):
+    bot.send_message(message.chat.id, 'Чтобы посмотреть список доступных команд, нажмите /help. Чтобы добавить пост к отслеживанию, пришлите ссылку.')
+
+
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    markup_inline = types.InlineKeyboardMarkup()                                # клавиатура со списком доступных команд
+    button1 = types.InlineKeyboardButton(text='Добавить пост', callback_data = '/add')
+    button2 = types.InlineKeyboardButton(text='Список постов', callback_data = '/posts')
+    button3 = types.InlineKeyboardButton(text='Архив', callback_data = '/removed')
+    markup_inline.add(button1, button2, button3)
+    bot.send_message(message.chat.id, 'Вот что вы можете сделать:', reply_markup=markup_inline)
+
+
+# Обработчик инлайн-кнопок
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    if call.data == '/add':                                                     # вызов команды /add
+        bot.answer_callback_query(call.id)
+        bot.send_message(call.from_user.id, 'Введите ссылку на пост')
+    elif call.data == "/posts":
+        bot.answer_callback_query(call.id)
+        bot.send_message(call.from_user.id, "Вы запросили список постов; к сожалению, этот функционал еще не реализован.")
+    elif call.data == "/removed":
+        bot.answer_callback_query(call.id)
+        bot.send_message(call.from_user.id, "Вы запросили архив; к сожалению, этот функционал еще не реализован.")
+    elif call.data == "/no":
+        bot.answer_callback_query(call.id)
+        bot.send_message(call.from_user.id, "Хорошо, если передумаете, просто пришлите мне ссылку.")
+
+
+@bot.message_handler(commands=['add'])
+def add_command(message):
+    bot.send_message(message.from_user.id, 'Введите ссылку на пост')
+
+
+# TODO: Прописать ввод названия поста перед добавлением в базу
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
-    if message.text == "/start":
-        bot.send_message(message.from_user.id, 'Введите ссылку на пост')
-    elif re.fullmatch(r'^https://t\.me/.+/.+$', message.text):
+    if re.fullmatch(r'^https://t\.me/.+/.+$', message.text):
         input_url = message.text
         if add_post(input_url):
-            bot.send_message(message.from_user.id, "Пост уже отслеживается.")
+            markup_inline = types.InlineKeyboardMarkup()
+            button4 = types.InlineKeyboardButton(text='Да', callback_data = '/add')
+            button5 = types.InlineKeyboardButton(text='Нет', callback_data = '/no')
+            markup_inline.add(button4, button5)
+            bot.send_message(message.chat.id, "Пост уже отслеживается. Хотите добавить другой пост?", reply_markup=markup_inline)
         else:
             bot.send_message(message.from_user.id, "Пост успешно добавлен к отслеживанию.")
     else:
-        bot.send_message(message.from_user.id, "Я тебя не понимаю. Напиши /start.")
+        bot.send_message(message.from_user.id, "Похоже, это не ссылка на пост в телеграм. Попробуйте еще раз.")
+
 
 def add_post(input_url):
     global post_id, url
