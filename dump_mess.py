@@ -1,5 +1,6 @@
 from distutils import dist
 from hashlib import new
+from operator import ne
 from requests import post
 import config
 import json
@@ -10,6 +11,9 @@ from telethon import connection
 from telethon.tl.functions.messages import GetHistoryRequest
 import gspread
 import pandas as pd
+import time
+
+start_time = time.time()
 
 client = TelegramClient(config.username, config.api_id, config.api_hash)
 client.start()
@@ -20,11 +24,13 @@ worksheet1 = sh.sheet1                                       	# получаем
 worksheet2 = sh.worksheet(config.sheet_2)					 	# получаем второй лист
 
 async def dump_all_messages(channel:str, post_id:int):
-	'''Принимает название канала и id поста. Записывает в Google таблицу комментарии, если они не были записаны ранее.'''
+	'''Принимает название канала и id поста. Записывает в Google таблицу комментарии, если они не были записаны ранее. Возвращает количество комментариев к посту.'''
+	k = 0
 	async for message in client.iter_messages(channel, reply_to=post_id, reverse=True):
 		if isinstance(message.sender, telethon.tl.types.User):
 			mess_date = message.date.isoformat()
-			newRec = [channel, str(post_id), mess_date, message.sender.first_name, message.text]
+			message_toRec = message.text[:30] + '...'
+			newRec = [channel, str(post_id), mess_date, message.sender.first_name, message_toRec]
 			oldRec = worksheet2.get_all_values()				# проверяет комментарий на наличие в базе
 			points_max = 0
 			for i in range(len(oldRec)):
@@ -36,18 +42,13 @@ async def dump_all_messages(channel:str, post_id:int):
 					points_max = points
 			if points_max != len(newRec):
 				worksheet2.append_row(newRec)
+		k += 1
+	return k
+
 				
-# TODO: Для каждой строки на листе 1 в google sheets добавить текущее количество комментариев (экспорт значений из словаря)
-def comments_count(comments):
-	'''Получает список из записей-комментариев.
-	Считает количество комментариев к каждому отслеживаемому посту.
-	Пороставляет количество в колонку 3 на листе 1 в google sheets.'''
+def comments_count_update(comments, worksheet):
 	for i in range(len(comments)):
-		for v in range(2, len(comments)):
-			del comments[i][v]
-	dframe = pd.DataFrame(comments, columns=['channel', 'post_id', 'count_comment'])
-	grouped = dframe.groupby(['channel', 'post_id']).count().to_dict()
-	# print(grouped)
+		worksheet.update_cell((i + 2), 3, comments[i])
 
 
 # TODO: переписать проверку на наличие комментариев в базе с разовым обращением к базе; для этого необходима функция download_comments_base(), которую необходимо запускать до цикла в main.
@@ -66,10 +67,17 @@ def input_url(worksheet):
 
 async def main():
 	params = input_url(worksheet1)
+	comments_count = []
 	for i in range(1, len(params)):
-		await dump_all_messages(params[i][0], params[i][1])
-	comments_count(input_url(worksheet2))
+		comments = await dump_all_messages(params[i][0], params[i][1])
+		comments_count.append(comments)
+	comments_count_update(comments_count, worksheet1)
+
 
 with client:
 	client.loop.run_until_complete(main())
-	
+
+# Замер и вывод времени работы модуля в секундах
+end_time = time.time()
+total_time = end_time - start_time
+print('Total time: ', '%.3f' % total_time, ' s.')
