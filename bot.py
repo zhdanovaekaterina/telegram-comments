@@ -37,13 +37,16 @@ def callback_query(call):
         bot.send_message(call.from_user.id, 'Введите ссылку на пост')
     elif call.data == "/posts":
         bot.answer_callback_query(call.id)
-        bot.send_message(call.from_user.id, "Вы запросили список постов; к сожалению, этот функционал еще не реализован.")
+        list_of_posts(call)
     elif call.data == "/removed":
         bot.answer_callback_query(call.id)
         bot.send_message(call.from_user.id, "Вы запросили архив; к сожалению, этот функционал еще не реализован.")
     elif call.data == "/no":
         bot.answer_callback_query(call.id)
         bot.send_message(call.from_user.id, "Хорошо, если передумаете, просто пришлите мне ссылку.")
+    elif call.data == '/post':
+        bot.answer_callback_query(call.id)
+        bot.send_message(call.from_user.id, "Вы нажали на пост; детальная информация по посту еще недоступна.")
 
 
 @bot.message_handler(commands=['add'])
@@ -83,6 +86,17 @@ def add_post(input_url):
     if not was_added:
         worksheet.append_row(newRec)
         return was_added
+
+
+def list_of_posts(call):
+    all_posts = worksheet.get_all_values()
+    for i in range(len(all_posts)):
+        del all_posts[i][2]
+    markup_inline = types.InlineKeyboardMarkup()
+    for i in range(1, len(all_posts)):
+        button = types.InlineKeyboardButton(text=f'{all_posts[i][0]}/{all_posts[i][1]}', callback_data = '/post')
+        markup_inline.add(button)
+    bot.send_message(call.from_user.id, "Ниже вы найдете список отслеживаемых постов.", reply_markup=markup_inline)
 
 
 bot.polling()

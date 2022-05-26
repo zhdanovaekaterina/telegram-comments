@@ -51,11 +51,6 @@ def comments_count_update(comments, worksheet):
 		worksheet.update_cell((i + 2), 3, comments[i])
 
 
-# TODO: переписать проверку на наличие комментариев в базе с разовым обращением к базе; для этого необходима функция download_comments_base(), которую необходимо запускать до цикла в main.
-def download_comments_base(sheet):
-	'''Загружает базу комментариев до начала проверки '''
-
-
 # TODO: скорректировать импорт из google sheets так, чтобы загружались только первые два столбца вместо worksheet.get_all_values(). После этого убрать из функции comments_count() удаление лишних значений.
 def input_url(worksheet):
 	'''Принимает ссылку на лист в Google таблицах. Возвращает список списков каналов и id отслеживаемых постов.'''
