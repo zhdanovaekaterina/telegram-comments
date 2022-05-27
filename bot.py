@@ -1,5 +1,6 @@
 import telebot
 from telebot import types
+from zmq import NULL
 import config
 import gspread
 import re
@@ -34,7 +35,7 @@ def help_command(message):
 def callback_query(call):
     if call.data == '/add':                                                     # вызов команды /add
         bot.answer_callback_query(call.id)
-        bot.send_message(call.from_user.id, 'Введите ссылку на пост')
+        bot.send_message(call.from_user.id, 'Введите название поста (рекомендуется не длиннее 30 символов).')
     elif call.data == "/posts":
         bot.answer_callback_query(call.id)
         list_of_posts(call)
@@ -43,7 +44,7 @@ def callback_query(call):
         bot.send_message(call.from_user.id, "Вы запросили архив; к сожалению, этот функционал еще не реализован.")
     elif call.data == "/no":
         bot.answer_callback_query(call.id)
-        bot.send_message(call.from_user.id, "Хорошо, если передумаете, просто пришлите мне ссылку.")
+        bot.send_message(call.from_user.id, "Хорошо, если передумаете, просто пришлите мне название поста.")
     elif call.data == '/post':
         bot.answer_callback_query(call.id)
         bot.send_message(call.from_user.id, "Вы нажали на пост; детальная информация по посту еще недоступна.")
@@ -51,7 +52,7 @@ def callback_query(call):
 
 @bot.message_handler(commands=['add'])
 def add_command(message):
-    bot.send_message(message.from_user.id, 'Введите ссылку на пост')
+    bot.send_message(message.from_user.id, 'Введите название поста (рекомендуется не длиннее 30 символов).')
 
 
 # TODO: Прописать ввод названия поста перед добавлением в базу
@@ -68,16 +69,19 @@ def get_text_messages(message):
         else:
             bot.send_message(message.from_user.id, "Пост успешно добавлен к отслеживанию.")
     else:
-        bot.send_message(message.from_user.id, "Похоже, это не ссылка на пост в телеграм. Попробуйте еще раз.")
+        global input_name
+        input_name = message.text
+        bot.send_message(message.from_user.id, 'Введите ссылку на пост')
 
 
 def add_post(input_url):
-    global post_id, url
+    # global post_id, url
+    global input_name
     post_id_to_compare = input_url.split('/')[-1]
     channel = input_url.split('/')[-2]					# возвращает название канала
     post_id = int(post_id_to_compare)                   # возвращает номер поста в канале
     was_added = False
-    newRec = [channel, post_id_to_compare]
+    newRec = [channel, post_id_to_compare, 'еще не собраны', 'еще не собраны', input_name]
     oldRec = worksheet.get_all_values()
     for i in range(len(oldRec)):                        # проверяет пост на наличие в базе
         if newRec[0] == oldRec[i][0] and newRec[1] == oldRec[i][1]:
@@ -85,16 +89,15 @@ def add_post(input_url):
             return was_added
     if not was_added:
         worksheet.append_row(newRec)
+        input_name = NULL
         return was_added
 
 
 def list_of_posts(call):
     all_posts = worksheet.get_all_values()
-    for i in range(len(all_posts)):
-        del all_posts[i][2]
     markup_inline = types.InlineKeyboardMarkup()
     for i in range(1, len(all_posts)):
-        button = types.InlineKeyboardButton(text=f'{all_posts[i][0]}/{all_posts[i][1]}', callback_data = '/post')
+        button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]})', callback_data = '/post')
         markup_inline.add(button)
     bot.send_message(call.from_user.id, "Ниже вы найдете список отслеживаемых постов.", reply_markup=markup_inline)
 

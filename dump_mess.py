@@ -24,7 +24,7 @@ worksheet1 = sh.sheet1                                       	# получаем
 worksheet2 = sh.worksheet(config.sheet_2)					 	# получаем второй лист
 
 async def dump_all_messages(channel:str, post_id:int):
-	'''Принимает название канала и id поста. Записывает в Google таблицу комментарии, если они не были записаны ранее. Возвращает количество комментариев к посту.'''
+	'''Принимает название канала и id поста. Возвращает количество комментариев к посту.'''
 	k = 0
 	async for message in client.iter_messages(channel, reply_to=post_id, reverse=True):
 		if isinstance(message.sender, telethon.tl.types.User):
@@ -45,8 +45,17 @@ async def dump_all_messages(channel:str, post_id:int):
 		k += 1
 	return k
 
+
+async def dump_post_subscribers(channel:str, post_id:int):
+	'''Принимает название канала и id поста. Возвращает количество подписчиков канала на момент добавления.'''
+
+
+async def dump_post_info(channel:str, post_id:int):
+	'''Принимает название канала и id поста. Возвращает информацию о посте (количество просмотров, репостов, реакций).'''
+
 				
 def comments_count_update(comments, worksheet):
+	'''Обновляет данные о посте в google таблицах. Пока что обновляет только кол-во комментариев.'''
 	for i in range(len(comments)):
 		worksheet.update_cell((i + 2), 3, comments[i])
 
