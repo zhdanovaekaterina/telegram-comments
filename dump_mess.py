@@ -10,7 +10,6 @@ from telethon.sync import TelegramClient
 from telethon import connection
 from telethon.tl.functions.messages import GetHistoryRequest
 import gspread
-import pandas as pd
 import time
 
 start_time = time.time()

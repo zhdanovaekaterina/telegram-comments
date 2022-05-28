@@ -4,3 +4,4 @@ config.py
 *.session-journal
 __pycache__
 google_key
+venv

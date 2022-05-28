@@ -34,30 +34,37 @@ def help_command(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     if call.data == '/add':                                                     # вызов команды /add
+        bot.send_message(call.from_user.id, 'Введите название поста в кавычках (рекомендуется не длиннее 30 символов). Пожалуйста, не используйте в названии символ '/'.')
         bot.answer_callback_query(call.id)
-        bot.send_message(call.from_user.id, 'Введите название поста (рекомендуется не длиннее 30 символов).')
     elif call.data == "/posts":
-        bot.answer_callback_query(call.id)
         list_of_posts(call)
+        bot.answer_callback_query(call.id)
     elif call.data == "/removed":
-        bot.answer_callback_query(call.id)
         bot.send_message(call.from_user.id, "Вы запросили архив; к сожалению, этот функционал еще не реализован.")
+        bot.answer_callback_query(call.id)
     elif call.data == "/no":
-        bot.answer_callback_query(call.id)
         bot.send_message(call.from_user.id, "Хорошо, если передумаете, просто пришлите мне название поста.")
-    elif call.data == '/post':
         bot.answer_callback_query(call.id)
-        bot.send_message(call.from_user.id, "Вы нажали на пост; детальная информация по посту еще недоступна.")
+    elif re.fullmatch(r'^\/post\/.*', call.data):
+        post_name = call.data[8:]
+        post_row = int(call.data.split('/')[-2]) + 1
+        post_data = worksheet.row_values(post_row)
+        markup_inline = types.InlineKeyboardMarkup()
+        button = types.InlineKeyboardButton(text='Перейти к посту', url = f'https://t.me/{post_data[0]}/{post_data[1]}')
+        markup_inline.add(button)
+        bot.send_message(call.from_user.id, f'Пост: {post_name}\nКанал: {post_data[0]}\nКомментариев: {post_data[2]}', reply_markup=markup_inline)
+        bot.answer_callback_query(call.id)
 
 
 @bot.message_handler(commands=['add'])
 def add_command(message):
-    bot.send_message(message.from_user.id, 'Введите название поста (рекомендуется не длиннее 30 символов).')
+    bot.send_message(message.from_user.id, 'Введите название поста в кавычках (рекомендуется не длиннее 30 символов). Пожалуйста, не используйте в названии символ '/'.')
 
 
 # TODO: Прописать ввод названия поста перед добавлением в базу
 @bot.message_handler(content_types=['text'])
 def get_text_messages(message):
+    global input_name
     if re.fullmatch(r'^https://t\.me/.+/.+$', message.text):
         input_url = message.text
         if add_post(input_url):
@@ -68,10 +75,14 @@ def get_text_messages(message):
             bot.send_message(message.chat.id, "Пост уже отслеживается. Хотите добавить другой пост?", reply_markup=markup_inline)
         else:
             bot.send_message(message.from_user.id, "Пост успешно добавлен к отслеживанию.")
-    else:
-        global input_name
-        input_name = message.text
+    elif message.text[0] == '"':
+        input_name = message.text[1:-2]
         bot.send_message(message.from_user.id, 'Введите ссылку на пост')
+    else:
+        markup_inline = types.InlineKeyboardMarkup()
+        button6 = types.InlineKeyboardButton(text='Написать разработчику', url = 'https://t.me/zhdanovakaterina')
+        markup_inline.add(button6)
+        bot.send_message(message.chat.id, 'Вы ввели какой-то текст. К сожалению, я еще не такой умный, чтобы вас понять. Если у вас есть пожелания по функционалу или вопросы по моей работе, пожалуйста, напишите моему разработчику', reply_markup=markup_inline)
 
 
 def add_post(input_url):
@@ -81,7 +92,7 @@ def add_post(input_url):
     channel = input_url.split('/')[-2]					# возвращает название канала
     post_id = int(post_id_to_compare)                   # возвращает номер поста в канале
     was_added = False
-    newRec = [channel, post_id_to_compare, 'еще не собраны', 'еще не собраны', input_name]
+    newRec = [channel, post_id_to_compare, 'еще не собраны', 0, input_name]
     oldRec = worksheet.get_all_values()
     for i in range(len(oldRec)):                        # проверяет пост на наличие в базе
         if newRec[0] == oldRec[i][0] and newRec[1] == oldRec[i][1]:
@@ -97,7 +108,7 @@ def list_of_posts(call):
     all_posts = worksheet.get_all_values()
     markup_inline = types.InlineKeyboardMarkup()
     for i in range(1, len(all_posts)):
-        button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]})', callback_data = '/post')
+        button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]})', callback_data = f'/post/{i}/{all_posts[i][4]}')
         markup_inline.add(button)
     bot.send_message(call.from_user.id, "Ниже вы найдете список отслеживаемых постов.", reply_markup=markup_inline)
 
