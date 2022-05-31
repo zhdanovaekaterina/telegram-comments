@@ -50,9 +50,16 @@ def callback_query(call):
         post_row = int(call.data.split('/')[-2]) + 1
         post_data = worksheet.row_values(post_row)
         markup_inline = types.InlineKeyboardMarkup()
-        button = types.InlineKeyboardButton(text='Перейти к посту', url = f'https://t.me/{post_data[0]}/{post_data[1]}')
-        markup_inline.add(button)
+        button1 = types.InlineKeyboardButton(text='Перейти к посту', url = f'https://t.me/{post_data[0]}/{post_data[1]}')
+        button2 = types.InlineKeyboardButton(text='Отметить комментарии', callback_data = f'/update_comments/{post_row}')
+        markup_inline.add(button1, button2)
         bot.send_message(call.from_user.id, f'Пост: {post_name}\nКанал: {post_data[0]}\nКомментариев: {post_data[2]}', reply_markup=markup_inline)
+        bot.answer_callback_query(call.id)
+    elif re.fullmatch(r'^\/update_comments\/.*', call.data):
+        post_row = int(call.data.split('/')[-1])
+        current_comments = worksheet.cell(post_row, 3).value
+        worksheet.update_cell(post_row, 4, current_comments)
+        bot.send_message(call.from_user.id, "Комментарии обновлены!")
         bot.answer_callback_query(call.id)
 
 
@@ -108,7 +115,13 @@ def list_of_posts(call):
     all_posts = worksheet.get_all_values()
     markup_inline = types.InlineKeyboardMarkup()
     for i in range(1, len(all_posts)):
-        button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]})', callback_data = f'/post/{i}/{all_posts[i][4]}')
+        old_comments = int(all_posts[i][3])
+        current_comments = int(all_posts[i][2])
+        if old_comments == current_comments:
+            button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]})', callback_data = f'/post/{i}/{all_posts[i][4]}')
+        else:
+            difference = current_comments - old_comments
+            button = types.InlineKeyboardButton(text=f'{all_posts[i][4]} ({all_posts[i][2]} +{difference})', callback_data = f'/post/{i}/{all_posts[i][4]}')
         markup_inline.add(button)
     bot.send_message(call.from_user.id, "Ниже вы найдете список отслеживаемых постов.", reply_markup=markup_inline)
 

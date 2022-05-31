@@ -11,6 +11,7 @@ from telethon import connection
 from telethon.tl.functions.messages import GetHistoryRequest
 import gspread
 import time
+from telethon import functions
 
 start_time = time.time()
 
@@ -22,7 +23,8 @@ sh = gs.open_by_key(config.google_sheet)                     	# подключа
 worksheet1 = sh.sheet1                                       	# получаем первый лист
 worksheet2 = sh.worksheet(config.sheet_2)					 	# получаем второй лист
 
-async def dump_all_messages(channel:str, post_id:int):
+
+async def dump_comments(channel:str, post_id:int):
 	'''Принимает название канала и id поста. Возвращает количество комментариев к посту.'''
 	k = 0
 	async for message in client.iter_messages(channel, reply_to=post_id, reverse=True):
@@ -42,18 +44,23 @@ async def dump_all_messages(channel:str, post_id:int):
 			if points_max != len(newRec):
 				worksheet2.append_row(newRec)
 		k += 1
-	return k
+	current_comments = k
+	return current_comments
 
 
-async def dump_post_subscribers(channel:str, post_id:int):
-	'''Принимает название канала и id поста. Возвращает количество подписчиков канала на момент добавления.'''
-
-
-async def dump_post_info(channel:str, post_id:int):
-	'''Принимает название канала и id поста. Возвращает информацию о посте (количество просмотров, репостов, реакций).'''
+# TODO: разобраться, как вытащить из объекта корутины значение
+async def dump_views(channel:str, post_id:int):
+	'''Принимает название канала и id поста. Возвращает количество просмотров поста.'''
+	views = client(functions.messages.GetMessagesViewsRequest(
+        peer = channel,
+        id = [post_id],
+        increment = False))
+	# all_views = json.dumps(views)
+	# print(all_views)
+	# return views
 
 				
-def comments_count_update(comments, worksheet):
+def comments_count_update(comments: list, worksheet):
 	'''Обновляет данные о посте в google таблицах. Пока что обновляет только кол-во комментариев.'''
 	for i in range(len(comments)):
 		worksheet.update_cell((i + 2), 3, comments[i])
@@ -72,10 +79,11 @@ async def main():
 	params = input_url(worksheet1)
 	comments_count = []
 	for i in range(1, len(params)):
-		comments = await dump_all_messages(params[i][0], params[i][1])
+		comments = await dump_comments(params[i][0], params[i][1])
 		comments_count.append(comments)
+		# await dump_views(params[i][0], params[i][1])
 	comments_count_update(comments_count, worksheet1)
-
+	
 
 with client:
 	client.loop.run_until_complete(main())
