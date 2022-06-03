@@ -12,6 +12,7 @@ from telethon.tl.functions.messages import GetHistoryRequest
 import gspread
 import time
 from telethon import functions
+from marshmallow import Schema, fields
 
 start_time = time.time()
 
@@ -56,8 +57,8 @@ async def dump_views(channel:str, post_id:int):
         id = [post_id],
         increment = False))
 	# all_views = json.dumps(views)
-	# print(all_views)
-	# return views
+	# print(json.dumps(views))
+	return views
 
 				
 def comments_count_update(comments: list, worksheet):
@@ -81,7 +82,8 @@ async def main():
 	for i in range(1, len(params)):
 		comments = await dump_comments(params[i][0], params[i][1])
 		comments_count.append(comments)
-		# await dump_views(params[i][0], params[i][1])
+		views = await dump_views(params[i][0], params[i][1])
+		# print(json.dumps(views))
 	comments_count_update(comments_count, worksheet1)
 	
 
